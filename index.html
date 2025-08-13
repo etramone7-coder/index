@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChaynupZine｜レコード一覧</title>
+<style>
+:root{
+  --bg:#f6D4AA; --ink:#111; --rule:#C8332B; --link:#2E66CC;
+  --punk-bg:#C44731; --punk-fg:#fff;
+  --reggae-bg:#1E8C48; --reggae-fg:#fff;
+  --metal-bg:#222; --metal-fg:#fff;
+  --rock-bg:#2E66CC; --rock-fg:#fff;
+  --hardrock-bg:#888022; --hardrock-fg:#fff;
+  --pubrock-bg:#A58822; --pubrock-fg:#fff;
+  --powerpop-bg:#5999FF; --powerpop-fg:#fff;
+  --other-bg:#888; --other-fg:#fff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP","Hiragino Sans",sans-serif;}
+header{padding:20px 16px 8px}
+h1{margin:0;font-size:28px;letter-spacing:.05em;font-weight:900}
+.desc{color:#333;margin:6px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(240px,1fr));gap:16px;padding:16px}
+.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,.08);cursor:pointer;display:flex;flex-direction:column}
+.thumb{aspect-ratio:1/1;background:#ddd;object-fit:cover;width:100%}
+.box{padding:12px 12px 14px}
+.badge{display:inline-block;background:#eee;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;margin-bottom:8px}
+.title{font-weight:800;font-size:16px;margin:2px 0 6px}
+.meta{font-size:12px;color:#555}
+a{color:var(--link);text-decoration:none}
+footer{padding:16px 16px 28px;color:#333}
+
+/* ジャンル色 */
+.badge.punk{background:var(--punk-bg);color:var(--punk-fg)}
+.badge.reggae{background:var(--reggae-bg);color:var(--reggae-fg)}
+.badge.metal{background:var(--metal-bg);color:var(--metal-fg)}
+.badge.rock{background:var(--rock-bg);color:var(--rock-fg)}
+.badge.hardrock{background:var(--hardrock-bg);color:var(--hardrock-fg)}
+.badge.pubrock{background:var(--pubrock-bg);color:var(--pubrock-fg)}
+.badge.powerpop{background:var(--powerpop-bg);color:var(--powerpop-fg)}
+.badge.other{background:var(--other-bg);color:var(--other-fg)}
+</style>
+</head>
+<body>
+<header>
+  <h1>ChaynupZine</h1>
+  <p class="desc">レコード紹介の全件一覧</p>
+</header>
+
+<section class="grid" id="list"></section>
+
+<footer>© ChaynupZine</footer>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbxnwpP9TSUoQBy147G-OoR1ylK-_FZQ7VHCeAXLIZg4Dmmm1ONG5EHuPq_Igxzl0m38YA/exec";
+
+function genreClass(g){
+  if(!g) return 'other';
+  const key = g.toLowerCase();
+  if(key.includes('パンク')||key.includes('punk')) return 'punk';
+  if(key.includes('レゲエ')||key.includes('reggae')) return 'reggae';
+  if(key.includes('メタル')||key.includes('metal')) return 'metal';
+  if(key.includes('ハードロック')) return 'hardrock';
+  if(key.includes('パブロック')) return 'pubrock';
+  if(key.includes('パワーポップ')||key.includes('powerpop')) return 'powerpop';
+  if(key.includes('ロック')||key.includes('rock')) return 'rock';
+  return 'other';
+}
+
+function onImgError(ev){
+  ev.target.onerror = null;
+  ev.target.src = "https://placehold.co/600x600?text=No+Image";
+}
+
+(async function main(){
+  const listEl = document.getElementById("list");
+  try{
+    // 毎回最新を取得（キャッシュバスター）
+    const res = await fetch(API + "?t=" + Date.now(), {cache:"no-store"});
+    const j = await res.json();
+    const rows = (j && j.items) ? j.items : [];
+
+    // 新着順（タイムスタンプ降順）。アルファベット順にしたい場合はここだけ変えてOK
+    rows
+      .sort((a,b)=> new Date(b.timestamp) - new Date(a.timestamp))
+      .forEach((row,i)=>{
+        const img = row.imageUrl || "https://placehold.co/600x600?text=No+Image";
+        const card = document.createElement("article");
+        card.className = "card";
+        card.onclick = () => location.href = "home.html?id=" + encodeURIComponent(i);
+
+        card.innerHTML = `
+          <img class="thumb" src="${img}" alt="cover" onerror="onImgError(event)">
+          <div class="box">
+            <span class="badge ${genreClass(row.genre)}">${row.genre || 'その他'}</span>
+            <div class="title">${row.band || ''}${row.track ? ' – ' + row.track : ''}</div>
+            <div class="meta">${row.timestamp || ''}${row.country ? '｜' + row.country : ''}</div>
+            <div class="desc">${row.desc || ''}</div>
+            <div class="meta">投稿者: ${row.poster || ''}</div>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+
+    if(rows.length === 0){
+      listEl.innerHTML = "<p>まだ投稿がありません。</p>";
+    }
+  }catch(err){
+    listEl.innerHTML = `<p>読み込みに失敗しました：${String(err)}</p>`;
+  }
+})();
+window.onImgError = onImgError;
+</script>
+</body>
+</html>
